@@ -1,0 +1,22 @@
+# Metastable Helium 2S -> 2P1,2 Doppler-free spectroscopy with ECDL
+## ECDL
+PZT slow (<20Hz) scanning across >0.8 mode-hope free range
+## Oscilloscope
+CH1  PZT drive monitor
+CH2  Spectroscopy PD
+CH3  LIA output
+
+# he_spec_1
+test; single trig;
+
+# he_spec_2
+single trig;
+
+# he_spec_3
+avg 32; 
+
+# he_spec_4
+high res; single trig;
+
+# he_spec_5
+high res; single trig; optimised Lamb-dip heights (but not much bigger?)
