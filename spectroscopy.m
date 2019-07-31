@@ -1,7 +1,3 @@
-
-clear all;
-
-
 %% Figure properties presets
 figname = 'he_sas';
 fontsize = 9;
@@ -13,7 +9,7 @@ papersize = [8 6];
 paperposition = [0 0 papersize];
 
 
-load('C:\Users\David\Dropbox\PhD\lab\ecdl\He_spectroscopy\data\sas_data.mat');
+load('data\sas_data.mat');      
 
 %% Plot scaled spectroscopy
 fig = figure();

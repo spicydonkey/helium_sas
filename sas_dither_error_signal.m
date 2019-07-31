@@ -37,16 +37,61 @@ errf = err(I_filter);
 
 %% plot
 dy_arb = -0.3;      % arbitrary shift to y-axis to zero err signal at lock
-    
+errf0 = errf+dy_arb;
+
+
 H = figure('Name','err_signal');
 
 hold on;
 
 % plot(ff/1e9,sasf,'b.');
-plot(ff/1e9,errf+dy_arb,'r.-');
+plot(ff/1e9,errf0,'r.-');
 
 xlabel('$\Delta f$ (GHz)');
 ylabel('error signal (arb unit)');
 
 box on;
 xlim([min(ff),max(ff)]/1e9);
+
+
+%% Zoom-in plot
+flim_inset = 0.2e9*[-1,1];
+idxlim_inset = idxNearest(ff,flim_inset);       % get index of range
+
+% get data for inset
+f_inset = ff(idxlim_inset(1):idxlim_inset(2));
+errf0_inset = errf0(idxlim_inset(1):idxlim_inset(2));
+
+
+% Model: first derivative of gaussian
+f_dgauss = @(b,x) - b(3) * (x - b(1)) .* exp( -(x - b(1)).^2 / (2*b(2)^2) );
+p0 = [10,10,-1];        % initial param: in MHz units
+
+% fit model to data
+fit_dgauss = fitnlm(f_inset*1e-6,errf0_inset,f_dgauss,p0);
+
+
+% fit prediction
+% config
+pred_nsig = 1;                  % n-sdev range: mu ± n*sigma
+pred_conflvl = erf(pred_nsig/sqrt(2));  % confidence level
+pred_alpha = 1-pred_conflvl;    % alpha: 100(1 – alpha)%
+
+xx = 1e-6*linspace(flim_inset(1),flim_inset(2),1e3);        % in MHz
+[yy, yy_ci] = predict(fit_dgauss,xx','Alpha',pred_alpha,'Simultaneous',true);
+
+
+%%% plot
+H=figure('Name','err_zoom_inset','Position',[0,0,325,154]);
+
+hold on;
+
+% FIT (GHz units)
+plot(1e-3*xx,yy,'r-');       
+% plot(xx,yy_ci,'r--');
+
+% data
+plot(1e-9*f_inset,errf0_inset,'k*');        
+
+box on;
+axis tight;
