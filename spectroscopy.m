@@ -1,20 +1,22 @@
 %% Figure properties presets
-figname = 'he_sas';
+figname = 'he_sas_mhf';
 fontsize = 9;
 linewidth = 1;
 markersize = 5;
 
 paperunits = 'centimeters';
-papersize = [8 6];
+% papersize = [8 6];
+papersize = [17.6 6];
 paperposition = [0 0 papersize];
 
 
 load('data\sas_data.mat');      
 
 %% Plot scaled spectroscopy
-fig = figure();
+H_sas_mhf = figure('Name',figname);
 
-plot(f/1e12,sas_full,'linewidth',linewidth);
+plot(f/1e12,sas_full,'b-','linewidth',linewidth);
+% plot(f/1e12,sas_full,'.','linewidth',linewidth);
 hold on;
 %plot(f/1e12,sas_smooth+1,'linewidth',1.5);
 
@@ -32,15 +34,15 @@ set(gca,'XMinorTick','on');
 
 %title('Saturated absorption spectroscopy of Helium with ECDL');
 xlabel('Frequency (THz)');
-ylabel('Absorption signal (V)');
+ylabel('SAS signal (arb unit)');
 
 %%% Annotation
-anno_t{1} = text(f_P2*1e-12,-1.5,'$2^3S_1-2^3P_2$',...
+anno_t{1} = text(f_P2*1e-12,-1.5,'$2\,^3\textrm{S}_1 \rightarrow 2\,^3\textrm{P}_2$',...
     'HorizontalAlignment','center','FontSize',10);
-anno_t{2} = text((f_P2+df_P1_P2)*1e-12,0.2,'$2^3S_1-2^3P_1$',...
+anno_t{2} = text((f_P2+df_P1_P2)*1e-12,0.2,'$2\,^3\textrm{S}_1 \rightarrow 2\,^3\textrm{P}_1$',...
     'HorizontalAlignment','center','FontSize',10);
 f_xover = f_P2+0.5*df_P1_P2;
-anno_t{3} = text(f_xover*1e-12,0.75,'x/o',...
+anno_t{3} = text(f_xover*1e-12,0.75,'C',...
     'HorizontalAlignment','center','FontSize',10);
 
 % %%% Error signal
@@ -51,14 +53,14 @@ anno_t{3} = text(f_xover*1e-12,0.75,'x/o',...
 %% Postprocess
 set(gca,'FontSize',fontsize);
 
-fig.Units = paperunits;
-fig.Position = paperposition;
+H_sas_mhf.Units = paperunits;
+H_sas_mhf.Position = paperposition;
 
-fig.PaperSize = papersize;
-fig.PaperUnits = paperunits;
-fig.PaperPosition = paperposition;
+H_sas_mhf.PaperSize = papersize;
+H_sas_mhf.PaperUnits = paperunits;
+H_sas_mhf.PaperPosition = paperposition;
 
-%saveas(fig, [figname, '.eps'], 'psc2');     % save fig in cd
+%saveas(H_sas_mhf, [figname, '.eps'], 'psc2');     % save H_sas_mhf in cd
 
 
 %% Zoom into 3P2 cooling transition
