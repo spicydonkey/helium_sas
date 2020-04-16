@@ -13,10 +13,17 @@ paperposition = [0 0 papersize];
 
 load('data\sas_data.mat');      
 
+
+%% fit stuff
+pred_nsig = 1;                  % n-sdev range: mu ± n*sigma
+pred_conflvl = erf(pred_nsig/sqrt(2));  % confidence level
+pred_alpha = 1-pred_conflvl;    % alpha: 100(1 – alpha)%
+
+
 %% Plot scaled spectroscopy
 H_sas_mhf = figure('Name',figname);
 
-plot(f/1e12,sas_full,'b-','linewidth',linewidth);
+p_data = plot(f/1e12,sas_full,'b-','linewidth',linewidth,'DisplayName','Data');
 % plot(f/1e12,sas_full,'.','linewidth',linewidth);
 hold on;
 %plot(f/1e12,sas_smooth+1,'linewidth',1.5);
@@ -37,21 +44,87 @@ set(gca,'XMinorTick','on');
 xlabel('Frequency (THz)');
 ylabel('SAS signal (arb unit)');
 
-%%% Annotation
-anno_t{1} = text(f_P2*1e-12,-1.5,'$2\,^3\textrm{S}_1 \rightarrow 2\,^3\textrm{P}_2$',...
-    'HorizontalAlignment','center','FontSize',10);
-anno_t{2} = text((f_P2+df_P1_P2)*1e-12,0.2,'$2\,^3\textrm{S}_1 \rightarrow 2\,^3\textrm{P}_1$',...
-    'HorizontalAlignment','center','FontSize',10);
-f_xover = f_P2+0.5*df_P1_P2;
-anno_t{3} = text(f_xover*1e-12,0.75,'C',...
-    'HorizontalAlignment','center','FontSize',10);
+
 
 % %%% Error signal
 % ind_range = 250:300;    % small range around the P2 peak
 % plot(f(ind_range)/1e12,sas_full(ind_range),'k');
 
 
-%% Postprocess
+%% fit Doppler broadened spectrum
+f2x = @(f) (f - f_P2)*1e-9;
+x2f = @(x) x*1e9 + f_P2;
+
+% x = (f - f_P2)*1e-9;
+x = f2x(f);
+y = sas_full;
+
+
+% absorption
+model_p1p2 = @(b,x)   b(3)*exp(-(x-b(1)).^2/(2*b(2)^2)) ...
+                    + b(6)*exp(-(x-b(4)).^2/(2*b(5)^2)) + b(7);     % sum of 2 gaussians (Doppler)
+p0_p1p2 = [0, 1, -5, df_P1_P2*1e-9, 1, -4, 3];
+
+fit_p1p2 = fitnlm(x,y,model_p1p2,p0_p1p2);
+
+
+% abs 2 -- fix resonance freqs
+model_p1p2_2 = @(b,x)   b(2)*exp(-(x-0).^2/(2*b(1)^2)) ...
+                    + b(4)*exp(-(x-df_P1_P2*1e-9).^2/(2*b(3)^2)) + b(5);     % sum of 2 gaussians (Doppler)
+p0_p1p2_2 = [1, -5, 1, -3, 3];
+
+fit_p1p2_2 = fitnlm(x,y,model_p1p2_2,p0_p1p2_2);
+
+% absorption 3 -- linear background
+model_p1p2_3 = @(b,x)   b(3)*exp(-(x-b(1)).^2/(2*b(2)^2)) ...
+                    + b(6)*exp(-(x-b(4)).^2/(2*b(5)^2)) + b(7) ...  % sum of 2 gaussians (Doppler)
+                    + b(8)*x;       % linear background
+p0_p1p2_3 = [0, 1, -5, df_P1_P2*1e-9, 1, -4, 3, 0.1];
+
+fit_p1p2_3 = fitnlm(x,y,model_p1p2_3,p0_p1p2_3);
+
+
+% saturated absorption
+model_sas = @(b,x)  b(3)*exp(-(x-b(1)).^2/(2*b(2)^2)) ...
+                  + b(6)*exp(-(x-b(4)).^2/(2*b(5)^2)) ...
+                  + b(7)*exp(-(x-0.003774).^2/(2*0.006678^2)) ...  % SAS/xover peaks
+                  + b(8)*exp(-(x-1.1615).^2/(2*0.003^2)) ...
+                  + b(9)*exp(-(x-df_P1_P2*1e-9).^2/(2*0.003^2)) + b(10);     % sum of 2 gaussians
+p0_sas = [0, 1, -5, df_P1_P2*1e-9, 1, -3, ...
+    0.5, 0.2, 0.1, 5.8662];
+
+fit_sas = fitnlm(x,y,model_sas,p0_sas);
+
+
+
+% fit predictions
+xfit = linspace_lim(min_max(x),1e3)';
+
+[yfit, yfit_ci] = predict(fit_p1p2,xfit,'Alpha',pred_alpha,'Simultaneous',true);
+[yfit2, yfit_ci2] = predict(fit_p1p2_2,xfit,'Alpha',pred_alpha,'Simultaneous',true);
+[yfit3, ~] = predict(fit_p1p2_3,xfit,'Alpha',pred_alpha,'Simultaneous',true);
+[yfit_sas, yfit_sas_ci] = predict(fit_sas,xfit,'Alpha',pred_alpha,'Simultaneous',true);
+
+
+% plot
+h_fits = figure('Name','fits');
+hold on;
+plot(x,y,'.','DisplayName','data');
+plot(xfit,yfit,'-','DisplayName','Doppler');
+plot(xfit,yfit2,'--','DisplayName','Doppler2');
+plot(xfit,yfit3,':','DisplayName','Doppler3');
+plot(xfit,yfit_sas,'-','DisplayName','SAS');
+legend();
+
+
+%% Main figure
+figure(H_sas_mhf);
+
+% plot a fitted one
+pfit = plot(x2f(xfit)/1e12,yfit,'g-','linewidth',2*linewidth,...
+    'DisplayName','Doppler fit');
+uistack(pfit,'bottom');
+
 set(gca,'FontSize',fontsize);
 
 H_sas_mhf.Units = paperunits;
@@ -60,6 +133,26 @@ H_sas_mhf.Position = paperposition;
 H_sas_mhf.PaperSize = papersize;
 H_sas_mhf.PaperUnits = paperunits;
 H_sas_mhf.PaperPosition = paperposition;
+
+
+
+%%% Annotation
+% arrows
+f_anno = [f_P2,(f_P2+df_P1_P2),f_P2+0.5*df_P1_P2];
+y_f = feval(fit_p1p2,f2x(f_anno));
+y_i = y_f + 1.5;
+
+text_anno = {'$2\,^3\textrm{S}_1 \rightarrow 2\,^3\textrm{P}_2$','$2\,^3\textrm{S}_1 \rightarrow 2\,^3\textrm{P}_1$','crossover'};
+
+for ii=1:length(f_anno)
+    text(f_anno(ii)/1e12,y_i(ii),text_anno{ii},...
+        'HorizontalAlignment','center','VerticalAlignment','bottom','FontSize',fontsize);
+    arrow3([f_anno(ii)/1e12,y_i(ii)],[f_anno(ii)/1e12,y_f(ii)+0.5],'',1/2);
+end
+axis normal;
+
+
+legend([p_data,pfit],'Location','southeast');
 
 %saveas(H_sas_mhf, [figname, '.eps'], 'psc2');     % save H_sas_mhf in cd
 
@@ -92,11 +185,6 @@ fit_L = fitnlm(df_M_zoom,y,f_lorentz,p0);
 
 % fit prediction
 xx = df_lim*linspace(-1,1,1e3);
-
-% config
-pred_nsig = 1;                  % n-sdev range: mu ± n*sigma
-pred_conflvl = erf(pred_nsig/sqrt(2));  % confidence level
-pred_alpha = 1-pred_conflvl;    % alpha: 100(1 – alpha)%
 
 [yy_G, yy_G_ci] = predict(fit_G,xx','Alpha',pred_alpha,'Simultaneous',true);
 [yy_L, yy_L_ci] = predict(fit_L,xx','Alpha',pred_alpha,'Simultaneous',true);
