@@ -3,6 +3,20 @@
 % 2019-07-30
 
 
+%% Figure properties presets
+% figname = 'he_sas_mhf';
+fontsize = 11;
+linewidth = 1;
+markersize = 8;
+
+paperunits = 'centimeters';
+% papersize = [8 6];
+% papersize = [17.6 6];
+% paperposition = [0 0 papersize];
+
+
+
+
 %% load data
 data = read_osci_rigol('data/raw/exp_data/he_spec_5.csv');
 
@@ -11,7 +25,12 @@ v = data(:,2);
 sas = data(:,3);
 err = data(:,4);
 
+
 %% calibrate frequency
+% post processed result
+f0_fit = 8.5853e6;   % P2 location from fit (MHz)
+
+
 % maually I find the 355th sample is the reference 2^3S_1 --> 2^3P_2 transition
 I_P2 = 355;
 f_P2 = 276.731672960526e12;       % transition in Hz
@@ -20,12 +39,14 @@ I_P1 = 800;
 f_P1 = f_P2 + 2.29e9;
 
 dfdv = (f_P1 - f_P2)/(v(I_P1) - v(I_P2));
-f = (v - v(I_P2))*dfdv;       
+f = (v - v(I_P2))*dfdv;      
 
 
 dvdt = (v(I_P1) - v(I_P2))/(t(I_P1) - t(I_P2));
 dfdt = dfdv * dvdt;
 f = (t - t(I_P2))*dfdt;
+
+f = f - f0_fit;     % shift such that zero-crossing is at x = 0
 
 % filter single pass
 I_filter = 209:957;
@@ -52,6 +73,7 @@ ylabel('error signal (arb unit)');
 
 box on;
 xlim([min(ff),max(ff)]/1e9);
+set(gca,'FontSize',fontsize);
 
 
 %% Zoom-in plot
@@ -87,11 +109,12 @@ H=figure('Name','err_zoom_inset','Position',[0,0,325,154]);
 hold on;
 
 % FIT (GHz units)
-plot(1e-3*xx,yy,'r-');       
+plot(1e-3*xx,yy,'k-');       
 % plot(xx,yy_ci,'r--');
 
 % data
-plot(1e-9*f_inset,errf0_inset,'k*');        
+plot(1e-9*f_inset,errf0_inset,'r.','MarkerSize',markersize);        
 
 box on;
 axis tight;
+set(gca,'FontSize',fontsize);

@@ -1,8 +1,9 @@
 %% Figure properties presets
 figname = 'he_sas_mhf';
 fontsize = 9;
+fontsize_2 = 11;
 linewidth = 1;
-markersize = 5;
+markersize = 20;
 
 paperunits = 'centimeters';
 % papersize = [8 6];
@@ -67,6 +68,12 @@ H_sas_mhf.PaperPosition = paperposition;
 df_M = 1e-6 * (f - f_P2);       % diff freq from transition (MHz)
 df_lim = 150;                   % half-width limit about 0 (MHz)
 
+
+% recenter zero by fit
+df_0 = 3.9629;      % obtained from fit
+df_M = df_M - df_0; 
+
+
 [~,I_min] = min(abs(df_M + df_lim));
 [~,I_max] = min(abs(df_M - df_lim));
 
@@ -101,14 +108,16 @@ pfit_L = [fit_L.Coefficients.Estimate, fit_L.Coefficients.SE];
 str_G = sprintf('$\\sigma =$ %0.2g $\\pm$ %0.1g MHz', pfit_G(2,1), pfit_G(2,2));
 str_L = sprintf('$\\gamma =$ %0.2g $\\pm$ %0.1g MHz', pfit_L(2,1), pfit_L(2,2));
 
+str_G_lwidth = sprintf('%0.2g $\\pm$ %0.1g MHz', 2.3548*pfit_G(2,1), 2.3548*pfit_G(2,2));
+
 %%% plot
 H = figure('Name','23P2_sas');
-plot(df_M_zoom,y,'k*');
+plot(df_M_zoom,y,'b.','MarkerSize',markersize);
 
 hold on;
 
-p_fitG = plot(xx,yy_G,'b-','DisplayName',str_G);
-p_fitG_ci = plot(xx,yy_G_ci,'b--');       % confidence interval
+p_fitG = plot(xx,yy_G,'k-','DisplayName','Gaussian fit');
+p_fitG_ci = plot(xx,yy_G_ci,'k--');       % confidence interval
 
 % p_fitL = plot(xx,yy_L,'r--','DisplayName',str_L);
 % p_fitL_ci = plot(xx,yy_L_ci,'r--');       % confidence interval
@@ -119,6 +128,21 @@ ylabel('SAS signal (arb unit)');
 
 xlim([-150,150]);
 
-% legend
+
+%%% Annotations
+% FWHM linewidth
+x_hmax = pfit_G(1,1) + sqrt(2*log(2)) * pfit_G(2,1) * [-1,1];     % x at half-maximum
+y_hmax = pfit_G(4,1) + 0.5*pfit_G(3,1);   % y half maximum
+larrow = 50;        % arrow length
+
+
+pbaspect('manual');     % otherwise aspect ratio rescales
+arrow3([x_hmax(1)-larrow,y_hmax],[x_hmax(1),y_hmax],'',2/3);
+arrow3([x_hmax(2)+larrow,y_hmax],[x_hmax(2),y_hmax],'',2/3);
+text(x_hmax(2)+larrow,y_hmax,str_G_lwidth,'FontSize',fontsize_2);
+
+
+%%% legend
 % legend([p_fitG,p_fitL]);
-legend([p_fitG]);
+lgd = legend([p_fitG],'FontSize',fontsize_2);
+set(gca,'FontSize',fontsize_2);
